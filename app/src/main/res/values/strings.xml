@@ -10,4 +10,6 @@
         }]
     </string>
 
+    <string name="server_error">Server error..</string>
+
 </resources>

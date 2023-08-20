@@ -1,5 +1,7 @@
 package com.example.custom_tabs.utils;
 
+import static androidx.constraintlayout.helper.widget.MotionEffect.TAG;
+
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
@@ -9,6 +11,7 @@ import android.util.Log;
 import androidx.core.content.ContextCompat;
 
 import java.util.Objects;
+
 
 /**
  * Created by Mehedi on 14-08-2023.
@@ -69,4 +72,6 @@ public class ServiceUtil {
         }
 
     }
+
+
 }

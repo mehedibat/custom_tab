@@ -9,61 +9,36 @@ import androidx.browser.customtabs.CustomTabsServiceConnection;
 import androidx.browser.customtabs.CustomTabsSession;
 import androidx.browser.trusted.TrustedWebActivityIntentBuilder;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Bundle;
-import android.security.KeyChain;
-import android.security.KeyChainAliasCallback;
 import android.util.Log;
-import android.widget.Toast;
 
+import com.example.custom_tabs.model.CustomTabViewModel;
+import com.example.custom_tabs.network.SSEEventData;
+import com.example.custom_tabs.network.STATUS;
 import com.example.custom_tabs.service.TimerService;
 import com.example.custom_tabs.utils.PostMessageBroadcastReceiver;
 import com.example.custom_tabs.utils.ServiceUtil;
 import com.google.androidbrowserhelper.trusted.TwaLauncher;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.cert.Certificate;
-import java.util.Enumeration;
-import java.util.Timer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+import okhttp3.WebSocket;
 
-import timber.log.Timber;
-
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity  {
 private static final String TAG = MainActivity.class.getSimpleName();
     //private final String webAppUrl = "https://192.168.30.193/";
     private final String webAppUrl = "https://stage-insightdb.ba-systems.com/";
     private CustomTabsSession mSession;
     private CustomTabsClient mClient;
 
-    private boolean mValidated = false;
-    boolean isOnPauseEnable = false;
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        isOnPauseEnable = true;
-        MyApp.getInstance().setActivityVisible(true);
-        Log.i(TAG,"onResume");
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-
-//        if (isOnPauseEnable) {
-//            isOnPauseEnable = false;
-//            return;
-//        }
-        //MyApp.getInstance().setActivityVisible(false);
-        Log.i(TAG,"onPause");
-    }
 
     @Override
     protected void onRestart() {
@@ -86,7 +61,7 @@ private static final String TAG = MainActivity.class.getSimpleName();
     protected void onDestroy() {
         super.onDestroy();
         Log.i(TAG,"onDestroy");
-        //MyApp.getInstance().setActivityVisible(false);
+        MyApp.getInstance().setActivityVisible(false);
     }
 
     @Override
@@ -95,21 +70,14 @@ private static final String TAG = MainActivity.class.getSimpleName();
         setContentView(R.layout.activity_main);
 
         Log.e(TAG,"onCreate Kobi");
-//        CustomTabsIntent intent = new CustomTabsIntent.Builder()
-//                .setUrlBarHidingEnabled(true)
-//                .setShowTitle(true)
-//                .build();
-//        intent.launchUrl(MainActivity.this, Uri.parse(webAppUrl));
-
-
-
-        bindCustomTabsService();
+        //bindCustomTabsService();
+        lunchTrustWebService();
     }
 
 
     private void lunchTrustWebService() {
-        new TrustedWebActivityIntentBuilder(Uri.parse(webAppUrl)).build(mSession)
-                .launchTrustedWebActivity(MainActivity.this);
+//        new TrustedWebActivityIntentBuilder(Uri.parse(webAppUrl)).build(mSession)
+//                .launchTrustedWebActivity(MainActivity.this);
 //        TwaLauncher twaLauncher = new TwaLauncher(this);
 //        twaLauncher.launch(Uri.parse(webAppUrl));
     }
@@ -117,7 +85,8 @@ private static final String TAG = MainActivity.class.getSimpleName();
     @Override
     protected void onStart() {
         super.onStart();
-        ServiceUtil.startForegroundService(this, TimerService.class);
+        //ServiceUtil.startForegroundService(this, TimerService.class);
+        getDataFromServer();
     }
 
 
@@ -138,10 +107,6 @@ private static final String TAG = MainActivity.class.getSimpleName();
                 public void onNavigationEvent(int navigationEvent, @Nullable Bundle extras) {
                     if (navigationEvent != NAVIGATION_FINISHED) {
                         return;
-                    }
-
-                    if (!mValidated) {
-                        Log.i(TAG, "Not starting PostMessage as validation didn't succeed.");
                     }
 
                 }
@@ -176,7 +141,7 @@ private static final String TAG = MainActivity.class.getSimpleName();
                         mSession = mClient.newSession(customTabsCallback);
 
                         lunchTrustWebService();
-                        registerBroadcastReceiver();
+
                     }
 
                     @Override
@@ -188,11 +153,29 @@ private static final String TAG = MainActivity.class.getSimpleName();
     }
 
 
-    @SuppressLint("WrongConstant")
-    private void registerBroadcastReceiver() {
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(PostMessageBroadcastReceiver.POST_MESSAGE_ACTION);
-        ContextCompat.registerReceiver(this, new PostMessageBroadcastReceiver(mSession),
-                intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+
+    public void getDataFromServer() {
+
+        CustomTabViewModel viewModel =  new ViewModelProvider(this).get(CustomTabViewModel.class);
+
+        viewModel.fetchSSEEvents();
+        viewModel.getSSEEvents().observe(this, new Observer<SSEEventData>() {
+            @Override
+            public void onChanged(@Nullable SSEEventData sseEventData) {
+                // Update UI based on the new data
+                if (sseEventData != null) {
+                    STATUS status = sseEventData.getStatus();
+                    String image = sseEventData.getFirstName();
+                    System.out.println("***********************************************************************");
+                    System.out.println("Id => " + sseEventData.getId());
+                    System.out.println("firstname => " + sseEventData.getFirstName());
+                    System.out.println("lastname => " + sseEventData.getLastname());
+                    // Update UI components accordingly
+                }
+            }
+        });
+
     }
+
+
 }
